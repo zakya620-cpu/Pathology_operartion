@@ -1,0 +1,33 @@
+{
+ "name": "ZAS · Pathology operation",
+ "short_name": "ZAS",
+ "description": "Cold Store Follow Up",
+ "start_url": "./",
+ "scope": "./",
+ "display": "standalone",
+ "orientation": "portrait",
+ "lang": "ar",
+ "dir": "rtl",
+ "background_color": "#000000",
+ "theme_color": "#0a1622",
+ "icons": [
+  {
+   "src": "icon-192.png",
+   "sizes": "192x192",
+   "type": "image/png",
+   "purpose": "any"
+  },
+  {
+   "src": "icon-512.png",
+   "sizes": "512x512",
+   "type": "image/png",
+   "purpose": "any"
+  },
+  {
+   "src": "icon-512.png",
+   "sizes": "512x512",
+   "type": "image/png",
+   "purpose": "maskable"
+  }
+ ]
+}
