@@ -317,12 +317,33 @@ ops:{t:'التشغيل اليومي',sum:['boxes','tons'],f:[['date','التار
 plan:{t:'الخطط',sum:['orig','rev','act'],f:[['date','التاريخ','date'],['subject','الخطة خاصة بـ'],['orig','الخطة الأصلية (طن)','number'],['rev','الخطة المعدلة (طن)','number'],['act','التنفيذ الفعلي (طن)','number'],['farm','رصيد المزرعة (طن)','number'],['notes','ملاحظات','long']]},
 delay:{t:'التأخيرات',sum:['tons'],f:[['date','التاريخ','date'],['area','المنطقة'],['cause','السبب'],['from','من','time'],['to','إلى','time'],['tons','الطن المتأثر','number'],['act','الإجراء'],['resp','المسؤول'],['st','الحالة','sel',['مفتوح','مغلق']],['notes','ملاحظات','long']]},
 rep:{t:'التقارير',sum:[],f:[['date','التاريخ','date'],['title','عنوان التقرير'],['type','النوع'],['notes','المحتوى','long'],['photo','صور','img']]},
-cm:{t:'اللجان',sum:[],f:[['name','اسم / رقم اللجنة'],['date','التاريخ','date'],['members','الأعضاء','long'],['notes','ملاحظات','long'],['photo','صور','img']]}
+cm:{t:'اللجان',sum:[],f:[['name','اسم / رقم اللجنة'],['date','التاريخ','date'],['members','الأعضاء','long'],['notes','ملاحظات','long'],['photo','صور','img']]},
+pivot:{t:'البيفوتات',sum:['area'],f:[['no','رقم البيفوت'],['farm','المزرعة / القطاع'],['area','المساحة (فدان)','number'],['crop','الصنف / المحصول'],['plant','تاريخ الزراعة','date'],['order','ترتيب الروجين','number'],['st','حالة الروجين','sel',['مجدول','جاري','مكتمل','إعادة فحص']],['infB','الإصابة قبل الروجين %','number'],['infA','الإصابة بعد الروجين %','number'],['eng','المهندس المسؤول'],['photo','صورة الحقل / الكروكي','img'],['notes','ملاحظات','long']]},
+labor:{t:'العمال والمقاولين',sum:['workers','cost'],f:[['contractor','اسم المقاول'],['phone','التليفون'],['pivot','البيفوت'],['task','نوع العمل','sel',['روجين','عزيق','جمع','حصاد','فرز']],['workers','عدد العمال','number'],['wage','يومية العامل (ج)','number'],['cost','التكلفة اليومية (تلقائي)','number'],['notes','ملاحظات','long']]},
+attend:{t:'الحضور',sum:['hours','ot'],f:[['date','التاريخ','date'],['name','اسم العامل'],['dept','القسم / المقاول'],['in','وقت الحضور','time'],['out','وقت الانصراف','time'],['st','الحالة','sel',['حاضر','متأخر','غائب','انصراف مبكر']],['hours','ساعات العمل (تلقائي)','number'],['ot','إضافي (تلقائي)','number'],['notes','ملاحظات','long']]},
+truck:{t:'استلام العربيات',sum:['boxes','tons','fine'],f:[['date','تاريخ الوصول','date'],['time','وقت الوصول','time'],['plate','رقم العربية'],['driver','السائق'],['phone','تليفون السائق'],['cargo','نوع الحمولة'],['farm','المزرعة / المصدر'],['boxes','الصناديق','number'],['tons','الوزن الصافي (طن)','number'],['room','الغرفة'],['st','الحالة','sel',['منتظرة','انتظار فحص','جاري التفريغ','تم الاستلام']],['udate','تاريخ التفريغ','date'],['utime','وقت التفريغ','time'],['rate','غرامة اليوم (ج) — الافتراضي 500','number'],['wait','ساعات الانتظار (تلقائي)','number'],['fine','غرامة التأخير (تلقائي)','number'],['notes','ملاحظات','long']]}
+};
+/* حقول محسوبة تلقائيًا (بيفوت/عمال/حضور/عربيات) */
+const COMP={
+ labor:d=>{const w=N(d.workers),g=N(d.wage);d.cost=w&&g?String(Math.round(w*g)):d.cost||''},
+ attend:d=>{
+  if(!d.in||!d.out)return;
+  const [a,b]=d.in.split(':').map(Number),[c,e]=d.out.split(':').map(Number);
+  let m=(c*60+e)-(a*60+b);if(m<0)m+=1440;
+  const h=Math.round(m/6)/10;d.hours=String(h);d.ot=String(Math.max(0,Math.round((h-8)*10)/10))},
+ truck:d=>{
+  if(!d.date)return;
+  const s=new Date(d.date+'T'+(d.time||'00:00'));
+  const done=d.st=='تم الاستلام'&&d.udate;
+  const t=done?new Date(d.udate+'T'+(d.utime||'00:00')):new Date();
+  const h=Math.max(0,(t-s)/36e5);
+  d.wait=String(Math.round(h*10)/10);
+  d.fine=String(Math.floor(h/24)*(N(d.rate)||500))}
 };
 let VF=[['fridge','التلاجة'],['name','اسم الصنف'],['code','كود الصنف'],['no','رقم الصنف'],['grade','رتبة الصنف'],['crop','نوع الزراعة','sel',['زراعات معتمدة','زراعات خاصة']],['src','المصدر (رقم البيفوت)'],['srcCode','كود المصدر'],['imp','الشركة المستوردة'],['cont','استكمال لوطات؟','sel',['لا','نعم']]];
 let LF=[['code','كود اللوط'],['from','من لوط','number'],['to','إلى لوط','number'],['full','الحالة','sel',['كامل','ناقص']],['boxes','عدد الصناديق','number'],['tons','وزن اللوط (طن)','number'],['of','يكمل لوط رقم']];
 const FRIDGE_FIELDS=Object.create(null);
-const PG=[['home','الرئيسية'],['ops','التشغيل'],['plan','الخطط'],['delay','التأخيرات'],['appr','الاعتماد'],['rep','التقارير']];
+const PG=[['home','الرئيسية'],['ops','التشغيل'],['plan','الخطط'],['delay','التأخيرات'],['appr','الاعتماد'],['truck','استلام العربيات'],['pivot','البيفوتات'],['labor','العمال والمقاولين'],['attend','الحضور'],['rep','التقارير']];
 const ACT=[['add','إضافة'],['edit','تعديل'],['del','حذف'],['design','تصميم']];
 const TAYSIR_ID='taysir';
 
@@ -481,7 +502,7 @@ function showHub(){
   drawer.addEventListener('keydown',event=>{if(event.key==='Escape')closeDrawer()});
   document.querySelectorAll('.hub-tile').forEach(tile=>tile.addEventListener('click',()=>{
    if(tile.dataset.section==='cold-store'){closeDrawerFromHub();coldStoreActive=true;openFridgePicker();return}
-   toast('قسم Farm Operation قيد الإعداد.',1)
+   coldStoreActive=false;activeFridge=null;shell('home')
   }));
   function closeDrawerFromHub(){drawer.hidden=true;backdrop.hidden=true;menuButton.setAttribute('aria-expanded','false')}
  }
@@ -645,7 +666,7 @@ function renderActiveFridgeName(){
 function pages(){return PG.filter(p=>p[0]=='home'||me.is_admin||(Array.isArray(me.pages)&&me.pages.includes(p[0]))).concat(me.is_admin?[['set','المستخدمون']]:[]).concat([['account','الحساب']])}
 function bottomPages(){
  if(coldStoreActive)return [['fridge-picker','الثلاجات'],['home','البيانات'],['appr','الاعتماد']];
- const available=pages();return ['home','ops','plan','rep','account'].map(key=>available.find(item=>item[0]===key)).filter(Boolean)
+ const available=pages();return ['home','truck','pivot','attend','account'].map(key=>available.find(item=>item[0]===key)).filter(Boolean)
 }
 function pageIcon(key){
  const paths={home:'<path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1V10Z"/>',ops:'<path d="M4 7h16M4 12h16M4 17h10"/><circle cx="18" cy="17" r="3"/>',plan:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/>',delay:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',appr:'<path d="m5 12 4 4L19 6"/><circle cx="12" cy="12" r="9"/>',rep:'<path d="M4 20V10m5 10V4m6 16v-7m5 7V7"/><path d="M2 20h20"/>',set:'<circle cx="9" cy="8" r="3"/><path d="M3 20c.5-3.5 2.5-5 6-5s5.5 1.5 6 5M16 5a3 3 0 0 1 0 6m2 4c2 .6 3 2 3 5"/>',account:'<circle cx="12" cy="8" r="3.5"/><path d="M5 21c.5-4 2.8-6 7-6s6.5 2 7 6"/>'};
@@ -738,7 +759,7 @@ async function modHTML(m){
  const M=MODS[m];
  const {data,error}=await sb.from('records').select('*').eq('module',m).order('created_at',{ascending:false}).limit(5000);
  if(error)return err(error);
- CACHE[m]=(data||[]).filter(r=>m!=='cm'||!r.data||r.data._zas_fridge_config!==true).filter(fridgeRecordBelongs);await sign(CACHE[m]);
+ CACHE[m]=(data||[]).filter(r=>m!=='cm'||!r.data||r.data._zas_fridge_config!==true).filter(fridgeRecordBelongs);await sign(CACHE[m]);if(COMP[m])CACHE[m].forEach(r=>{if(r.data)COMP[m](r.data)});
  const ev=edit?CACHE[m].find(r=>r.id==edit):null,fs=getF(m);
  let h='';
  if(ev?can('edit'):can('add'))
@@ -749,7 +770,7 @@ async function modView(m){return await modHTML(m)}
 async function saveMod(m){
  try{
   toast('جاري الحفظ...');
-  const p='f_'+m+'_',fs=getF(m),d=rd(p,fs);await imgs(p,fs,d);
+  const p='f_'+m+'_',fs=getF(m),d=rd(p,fs);await imgs(p,fs,d);if(COMP[m])COMP[m](d);
   if(!filled(d))return toast('املأ خانة واحدة على الأقل',1);
   if(activeFridge)d.fridge_id=activeFridge;
   const {error}=await(edit?sb.from('records').update({data:d}).eq('id',edit):sb.from('records').insert({module:m,data:d}));
